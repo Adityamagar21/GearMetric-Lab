@@ -1,0 +1,83 @@
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Pulse counters
+volatile unsigned long inputCount = 0;
+volatile unsigned long outputCount = 0;
+
+// Interrupt functions
+void inputPulse() {
+  inputCount++;
+}
+
+void outputPulse() {
+  outputCount++;
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  // Attach sensors to interrupt pins
+  attachInterrupt(digitalPinToInterrupt(2), inputPulse, RISING);
+  attachInterrupt(digitalPinToInterrupt(3), outputPulse, RISING);
+
+  // OLED init
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    while (true); // stop if OLED fails
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+}
+
+void loop() {
+
+  // Reset counters
+  inputCount = 0;
+  outputCount = 0;
+
+  delay(1000); // measure for 1 second
+
+  int inputRPM = inputCount * 60;
+  int outputRPM = outputCount * 60;
+
+  float ratio = 0;
+  if (inputRPM != 0) {
+    ratio = (float)outputRPM / inputRPM;
+  }
+
+  // OLED Display
+  display.clearDisplay();
+
+  display.setCursor(0, 0);
+  display.print("Input: ");
+  display.print(inputRPM);
+  display.println(" RPM");
+
+  display.print("Output: ");
+  display.print(outputRPM);
+  display.println(" RPM");
+
+  display.print("Ratio: ");
+  display.print(ratio, 2);
+  display.println("x");
+
+  display.display();
+
+  // Serial monitor (optional)
+  Serial.print("Input RPM: ");
+  Serial.println(inputRPM);
+  Serial.print("Output RPM: ");
+  Serial.println(outputRPM);
+  Serial.print("Ratio: ");
+  Serial.println(ratio);
+
+  delay(500);
+}
